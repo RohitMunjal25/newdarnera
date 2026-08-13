@@ -31,7 +31,7 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased scroll-smooth`}
     >
-      <body className="min-h-full flex flex-col bg-black text-white selection:bg-[#d4af37] selection:text-black">
+      <body className="min-h-full flex flex-col bg-[#fffdfa] text-[#342b24] selection:bg-[#d9b38c] selection:text-[#342b24]">
         <AuthProvider>
           <CartProvider>
             {children}

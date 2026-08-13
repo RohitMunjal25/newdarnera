@@ -1,98 +1,10 @@
+"use client";
+import { FormEvent, useEffect, useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import Link from "next/link";
-
-export default function AccountPage() {
-  return (
-    <main className="min-h-screen bg-black text-white flex flex-col">
-      <Navbar />
-      
-      <div className="flex-1 max-w-5xl mx-auto w-full px-6 py-16">
-        
-        {/* Header */}
-        <div className="mb-12 border-b border-gray-900 pb-6">
-          <div className="flex items-center gap-2 text-[#d4af37] text-xs tracking-widest uppercase mb-2">
-            <span>✦</span>
-            <span>MEMBER DASHBOARD</span>
-          </div>
-          <h1 className="text-3xl md:text-4xl font-serif tracking-[0.15em] uppercase">MY ACCOUNT</h1>
-        </div>
-
-        {/* Dashboard Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
-          
-          {/* Profile Card */}
-          <div className="bg-[#060606] border border-gray-900 p-6 rounded-sm">
-            <h3 className="font-serif text-sm tracking-widest text-[#d4af37] uppercase mb-4">Profile Info</h3>
-            <p className="text-xs text-gray-300 mb-1">Rohit Munjal</p>
-            <p className="text-xs text-gray-500 mb-6">sample@gmail.com</p>
-            <button className="border border-gray-800 text-xs tracking-[0.2em] px-4 py-2 hover:border-[#d4af37] hover:text-[#d4af37] transition-colors uppercase">
-              Edit Details
-            </button>
-          </div>
-
-          {/* Quick Links Card */}
-          <div className="bg-[#060606] border border-gray-900 p-6 rounded-sm flex flex-col justify-between">
-            <div>
-              <h3 className="font-serif text-sm tracking-widest text-[#d4af37] uppercase mb-4">Quick Navigation</h3>
-              <ul className="space-y-3 text-xs tracking-wider">
-                <li>
-                  <Link href="/account/orders" className="text-gray-300 hover:text-[#d4af37] transition-colors flex items-center justify-between">
-                    <span>View My Orders</span>
-                    <span>→</span>
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/collection" className="text-gray-300 hover:text-[#d4af37] transition-colors flex items-center justify-between">
-                    <span>Explore Collection</span>
-                    <span>→</span>
-                  </Link>
-                </li>
-              </ul>
-            </div>
-          </div>
-
-          {/* Saved Address Card */}
-          <div className="bg-[#060606] border border-gray-900 p-6 rounded-sm">
-            <h3 className="font-serif text-sm tracking-widest text-[#d4af37] uppercase mb-4">Saved Address</h3>
-            <p className="text-xs text-gray-300 leading-relaxed mb-6">
-              Flat No. 402, Royal Palms Luxury Towers,<br />
-              Main Avenue, Jaipur, Rajasthan - 302001
-            </p>
-            <button className="border border-gray-800 text-xs tracking-[0.2em] px-4 py-2 hover:border-[#d4af37] hover:text-[#d4af37] transition-colors uppercase">
-              Manage Address
-            </button>
-          </div>
-
-        </div>
-
-        {/* Recent Orders Section Preview */}
-        <div className="bg-[#060606] border border-gray-900 p-8 rounded-sm">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="font-serif tracking-widest text-lg uppercase">Recent Orders</h2>
-            <Link href="/account/orders" className="text-xs tracking-widest text-[#d4af37] hover:underline uppercase">
-              View All Orders →
-            </Link>
-          </div>
-
-          <div className="border-t border-gray-900 pt-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-            <div>
-              <p className="text-xs font-mono text-[#d4af37]">ORDER #DRN-98421</p>
-              <p className="text-sm font-serif mt-1">EIDOLON (White Oud - 100ml)</p>
-              <p className="text-[10px] text-gray-500 mt-1">Placed on: August 2, 2026</p>
-            </div>
-            <div className="flex items-center gap-6">
-              <span className="bg-emerald-950/60 border border-emerald-900 text-emerald-400 text-[10px] tracking-widest px-3 py-1 rounded-sm uppercase">
-                Delivered
-              </span>
-              <span className="font-serif text-sm">₹ 2,999</span>
-            </div>
-          </div>
-        </div>
-
-      </div>
-
-      <Footer />
-    </main>
-  );
-}
+import { useAuth } from "@/components/context/AuthContext";
+import { api, token } from "@/lib/api";
+type Address = { _id: string; fullName: string; phone: string; address: string; city: string; state: string; pincode: string }; type User = { name: string; email: string; addresses: Address[] }; type Order = { _id: string; finalAmount?: number; totalAmount: number; orderStatus: string; createdAt: string };
+export default function AccountPage() { const router = useRouter(), { isLoggedIn, logout } = useAuth(); const [user, setUser] = useState<User | null>(null), [orders, setOrders] = useState<Order[]>([]), [name, setName] = useState(""), [note, setNote] = useState(""), [error, setError] = useState(""); const load = async () => { try { const data = await api<{ user: User; orders: Order[] }>("/api/auth/profile", { token: token() }); setUser(data.user); setOrders(data.orders); setName(data.user.name); } catch (err) { setError(err instanceof Error ? err.message : "Could not load account."); } }; useEffect(() => { if (isLoggedIn) void load(); }, [isLoggedIn]); async function saveName(event: FormEvent) { event.preventDefault(); try { await api("/api/auth/profile/name", { method: "PATCH", token: token(), body: JSON.stringify({ name }) }); setNote("Saved."); } catch (err) { setError(err instanceof Error ? err.message : "Could not update profile."); } } async function leave() { await logout(); router.push("/"); } if (!isLoggedIn) return <main className="min-h-screen bg-[#fffdfa]"><Navbar /><div className="mx-auto grid min-h-[65vh] max-w-xl place-items-center px-5 text-center"><div><p className="text-[10px] tracking-[.3em] text-[#a47b60]">DARNERA ACCOUNT</p><h1 className="mt-3 font-serif text-4xl">Your scent story starts here.</h1><p className="mt-4 text-sm text-[#806f63]">Use the account icon in the navbar to sign in securely.</p></div></div><Footer /></main>; return <main className="min-h-screen bg-[#fffdfa]"><Navbar /><div className="mx-auto max-w-6xl px-5 py-14 md:px-10"><div className="flex flex-wrap items-end justify-between gap-5 border-b border-[#eadfd4] pb-8"><div><p className="text-[10px] font-bold tracking-[.28em] text-[#a47b60]">YOUR DARNERA</p><h1 className="mt-3 font-serif text-5xl">Hello, {user?.name || "there"}.</h1><p className="mt-3 text-sm text-[#806f63]">Manage your details, delivery places and fragrance orders.</p></div><button onClick={leave} className="rounded-full border border-[#d8c7b8] bg-white px-5 py-3 text-xs font-semibold tracking-[.12em] text-[#735847]">LOG OUT</button></div>{error && <p className="mt-6 rounded-xl bg-red-50 p-4 text-sm text-red-700">{error}</p>}<div className="mt-8 grid gap-5 lg:grid-cols-[1.15fr_.85fr]"><section className="rounded-3xl bg-[#f1e8df] p-7"><p className="text-[10px] font-bold tracking-[.22em] text-[#a47b60]">PROFILE DETAILS</p><form onSubmit={saveName} className="mt-6 max-w-md"><label className="text-xs text-[#806f63]">Full name<input value={name} onChange={(e) => setName(e.target.value)} className="mt-2 w-full rounded-xl border border-[#decfc2] bg-white p-3 text-sm" /></label><p className="mt-4 text-sm text-[#66584e]">{user?.email}</p><button className="mt-6 rounded-xl bg-[#342a22] px-5 py-3 text-xs font-semibold tracking-[.12em] text-white">SAVE CHANGES</button>{note && <span className="ml-3 text-xs text-[#55704f]">{note}</span>}</form></section><section className="rounded-3xl bg-[#314137] p-7 text-[#fffaf3]"><p className="text-[10px] font-bold tracking-[.22em] text-[#e3bd91]">YOUR ORDERS</p><p className="mt-6 font-serif text-5xl">{orders.length}</p><p className="mt-2 text-sm text-[#d4ddd0]">orders placed with Darnera</p><Link href="/account/orders" className="mt-8 inline-block text-xs font-semibold tracking-[.12em] text-[#f0c99f]">VIEW ORDER HISTORY →</Link></section></div><section className="mt-5 rounded-3xl border border-[#eadfd4] bg-white p-7"><div className="flex items-center justify-between"><div><p className="text-[10px] font-bold tracking-[.22em] text-[#a47b60]">DELIVERY PLACES</p><h2 className="mt-2 font-serif text-2xl">Saved addresses</h2></div><Link href="/checkout" className="rounded-full bg-[#f1e8df] px-4 py-2 text-xs text-[#735847]">Add at checkout</Link></div>{!user?.addresses.length ? <p className="mt-6 text-sm text-[#806f63]">You haven’t saved an address yet.</p> : <div className="mt-6 grid gap-4 md:grid-cols-2">{user.addresses.map((address) => <article key={address._id} className="rounded-2xl bg-[#faf7f2] p-5 text-sm leading-6 text-[#66584e]"><b>{address.fullName}</b><br />{address.address}<br />{address.city}, {address.state} — {address.pincode}<br />{address.phone}</article>)}</div>}</section></div><Footer /></main>; }

@@ -1,233 +1,138 @@
 "use client";
-
-import { useState, useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { useCart } from "@/components/context/CartContext";
-import { useRouter } from "next/navigation";
 
-type PerfumeItem = {
-  id: number;
-  title: string;
-  subtitle: string;
-  price50: number;
-  price100: number;
-  price50Str: string;
-  price100Str: string;
-  image: string;
-  videoUrl: string;
-  reviews: number;
-  description: string;
-  tags: string[];
-};
+type Scent = { id: number; name: string; note: string; price: number; image: string; description: string };
 
-const items: PerfumeItem[] = [
-  {
-    id: 1, title: "EIDOLON WHITE OUD", subtitle: "EXTRAIT DE PARFUM", price50: 2999, price100: 5499, price50Str: "₹ 2,999", price100Str: "₹ 5,499",
-    image: "/perfume/eidolon.png", videoUrl: "/perfume/video.mp4", reviews: 128,
-    description: "A masterpiece of contrast where rare White Oud meets warm woods and smoky depth. Bold. Refined. Unforgettable.", tags: ["UNISEX", "LONG LASTING"]
-  },
-  {
-    id: 2, title: "NYRA", subtitle: "EXTRAIT DE PARFUM", price50: 1799, price100: 3499, price50Str: "₹ 1,799", price100Str: "₹ 3,499",
-    image: "/perfume/nyra.png", videoUrl: "/perfume/video.mp4", reviews: 94,
-    description: "An intoxicating blend of delicate florals and sweet amber notes designed for the graceful and alluring personality.", tags: ["FOR HER", "ELEGANT"]
-  },
-  {
-    id: 3, title: "OBSIDIAN", subtitle: "EXTRAIT DE PARFUM", price50: 2999, price100: 5499, price50Str: "₹ 2,999", price100Str: "₹ 5,499",
-    image: "/perfume/obsidian.png", videoUrl: "/perfume/video.mp4", reviews: 112,
-    description: "Deep, mysterious and commanding. Obsidian wraps you in rich dark musk, leather, and spicy undertones.", tags: ["FOR HIM", "INTENSE"]
-  },
-  {
-    id: 4, title: "SOLVERIN", subtitle: "EXTRAIT DE PARFUM", price50: 2199, price100: 3999, price50Str: "₹ 2,199", price100Str: "₹ 3,999",
-    image: "/perfume/solverin.png", videoUrl: "/perfume/video.mp4", reviews: 85,
-    description: "A commanding fragrance built on rich spiced leather and earthy notes, crafted for those who take charge.", tags: ["FOR HIM", "BOLD"]
-  }
+const scents: Scent[] = [
+  { id: 1, name: "Eidolon", note: "White oud · amber", price: 2999, image: "/perfume/eidolon.png", description: "A luminous white oud anchored by warm amber and polished woods. Built to stay close, then quietly take over the room." }, 
+  { id: 2, name: "Obsidian", note: "Dark musk · leather", price: 2999, image: "/perfume/obsidian.png", description: "Dark musk, soft leather and a peppered mineral edge. A deeper scent for an after-dark kind of presence." }, 
+  { id: 3, name: "Nyra", note: "Rose · soft woods", price: 1799, image: "/perfume/nyra.png", description: "A petal-soft floral that settles into creamy woods. Modern, graceful and made for a little everyday ceremony." }
 ];
 
-export default function WatchAndBuy() {
-  const [selectedItem, setSelectedItem] = useState<PerfumeItem | null>(null);
-  const [selectedSize, setSelectedSize] = useState<'50ML' | '100ML'>('50ML');
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const { addToCart } = useCart();
-  const router = useRouter();
+export default function WatchAndBuy() { 
+  const { addToCart } = useCart(); 
+  const [selected, setSelected] = useState<Scent | null>(null); 
+  const video = useRef<HTMLVideoElement>(null); 
 
-  // Prevent background scrolling when modal is open
-  useEffect(() => {
-    if (selectedItem) document.body.style.overflow = 'hidden';
-    else document.body.style.overflow = 'unset';
-  }, [selectedItem]);
+  useEffect(() => { 
+    document.body.style.overflow = selected ? "hidden" : ""; 
+    return () => { document.body.style.overflow = ""; }; 
+  }, [selected]); 
 
-  const handleClose = () => {
-    if (videoRef.current) {
-      videoRef.current.pause();
-      videoRef.current.currentTime = 0;
-    }
-    setSelectedItem(null);
-  };
-
-  const handleAddToCart = () => {
-    if (!selectedItem) return;
-    const price = selectedSize === '50ML' ? selectedItem.price50 : selectedItem.price100;
-    addToCart({
-      id: selectedItem.id,
-      name: selectedItem.title,
-      subtitle: `${selectedItem.subtitle} (${selectedSize})`,
-      price: price,
-      image: selectedItem.image
-    });
-  };
-
-  const handleProceedCheckout = () => {
-    handleAddToCart();
-    handleClose();
-    router.push('/checkout');
-  };
+  function add(scent: Scent) { 
+    addToCart({ id: scent.id, name: scent.name, subtitle: scent.note, price: scent.price, image: scent.image }); 
+  } 
 
   return (
-    <section className="bg-[#050505] text-white py-32 px-4 relative border-t border-gray-900">
-      
-      {/* Premium Header */}
-      <div className="text-center max-w-3xl mx-auto mb-20 flex flex-col items-center">
-        <span className="text-[#d4af37] text-[10px] tracking-[0.3em] mb-4">IMMERSIVE EXPERIENCE</span>
-        <h2 className="text-3xl md:text-5xl font-serif tracking-[0.15em] text-white">WATCH & <span className="text-gray-500 italic">BUY</span></h2>
-        <div className="h-[1px] w-24 bg-gradient-to-r from-transparent via-[#d4af37] to-transparent mt-8"></div>
-      </div>
+    <section className="bg-[#1f2622] px-5 py-24 text-[#fffaf3] md:px-10">
+      <div className="mx-auto max-w-7xl">
+        
+        {/* Centered Header */}
+        <div className="mb-16 text-center">
+          <p className="text-[10px] font-bold tracking-[.3em] text-[#e3bd91]">WATCH & BUY</p>
+          <h2 className="mt-4 font-serif text-4xl md:text-5xl">
+            Find your <i className="text-[#e6c39a]">signature trail.</i>
+          </h2>
+          <p className="mx-auto mt-6 max-w-md text-sm leading-7 text-[#b5c2b0]">
+            Tap a bottle to enter its world. Watch the ritual, read the notes, and bring it to your bag.
+          </p>
+        </div>
 
-      {/* Cinematic Horizontal Scroll */}
-      <div className="flex gap-8 overflow-x-auto scrollbar-hide pb-12 pt-4 px-4 md:px-12 snap-x snap-mandatory">
-        {items.map((item) => (
-          <div
-            key={item.id}
-            onClick={() => setSelectedItem(item)}
-            className="snap-center min-w-[300px] md:min-w-[400px] h-[500px] relative rounded-none overflow-hidden cursor-pointer group bg-black flex-shrink-0 border border-gray-800 hover:border-[#d4af37]/50 transition-all duration-500"
-          >
-            <Image 
-              src={item.image} 
-              alt={item.title} 
-              fill 
-              className="object-cover p-4 group-hover:scale-110 transition-transform duration-[1.5s] ease-out opacity-80 group-hover:opacity-100" 
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent" />
-            
-            {/* Play Button Overlay */}
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="w-16 h-16 rounded-full border border-[#d4af37] flex items-center justify-center bg-black/40 backdrop-blur-md group-hover:bg-[#d4af37] transition-all duration-300 shadow-[0_0_20px_rgba(0,0,0,0.5)] group-hover:shadow-[0_0_30px_rgba(212,175,55,0.4)]">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" className="text-[#d4af37] group-hover:text-black ml-1 transition-colors">
-                  <path d="M8 5v14l11-7z" />
-                </svg>
-              </div>
-            </div>
-            
-            {/* Card Content */}
-            <div className="absolute bottom-0 left-0 right-0 p-8 transform translate-y-4 group-hover:translate-y-0 transition-transform duration-500">
-                <h3 className="font-serif text-lg md:text-xl tracking-[0.1em] text-white mb-2">{item.title}</h3>
-                <div className="flex items-center gap-4">
-                  <p className="text-[10px] text-[#d4af37] tracking-[0.2em] uppercase">{item.subtitle}</p>
-                  <span className="text-gray-500 text-xs">—</span>
-                  <p className="text-[10px] text-gray-400 tracking-[0.2em]">WATCH FILM</p>
-                </div>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Ultra-Premium Modal - Added pt-24 so it sits below Navbar */}
-      {selectedItem && (
-        <div className="fixed inset-0 z-[99999] bg-black/95 backdrop-blur-xl flex items-center justify-center p-4 md:p-8 pt-24 md:pt-28 transition-opacity duration-300">
-          <div className="bg-[#0a0a0a] w-full max-w-6xl max-h-[85vh] rounded-sm overflow-hidden flex flex-col lg:flex-row relative shadow-2xl border border-gray-800">
-            
-            {/* Close Button - Placed securely with high z-index */}
+        {/* 3-Column Spaced Grid */}
+        <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
+          {scents.map((scent) => (
             <button 
-              onClick={handleClose} 
-              className="absolute top-4 right-4 z-50 text-gray-300 hover:text-white transition-colors w-10 h-10 flex items-center justify-center bg-black/80 backdrop-blur-md rounded-full border border-gray-700 hover:border-[#d4af37] cursor-pointer shadow-xl"
+              key={scent.id} 
+              onClick={() => setSelected(scent)} 
+              className="group text-left transition duration-500"
             >
-              ✕
-            </button>
-
-            {/* Video Area (Left Side) */}
-            <div className="w-full lg:w-[55%] relative h-[35vh] lg:h-auto bg-black flex items-center justify-center overflow-hidden">
-                <video 
-                  ref={videoRef}
-                  src={selectedItem.videoUrl} 
-                  autoPlay 
-                  loop 
-                  muted={false} 
-                  playsInline
-                  className="w-full h-full object-contain pointer-events-none"
+              <div className="relative aspect-[4/5] overflow-hidden rounded-2xl bg-gradient-to-b from-[#2a362f] to-[#1f2622] shadow-xl">
+                <Image 
+                  src={scent.image} 
+                  alt={scent.name} 
+                  fill 
+                  className="object-contain p-10 transition duration-700 group-hover:scale-110" 
                 />
-            </div>
-
-            {/* Content & Buy Area (Right Side) */}
-            <div className="w-full lg:w-[45%] bg-[#0d0d0d] flex flex-col h-[50vh] lg:h-auto">
+                {/* Play Button Overlay */}
+                <div className="absolute inset-0 bg-black/10 transition duration-500 group-hover:bg-black/30" />
+                <span className="absolute left-1/2 top-1/2 grid h-14 w-14 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border border-white/30 bg-white/10 text-white backdrop-blur-md transition duration-500 group-hover:bg-white group-hover:text-[#1f2622]">
+                  ▶
+                </span>
+              </div>
               
-              {/* Scrollable Details Section */}
-              <div className="p-6 md:p-10 pt-8 overflow-y-auto flex-1 space-y-6">
-                <div>
-                    <span className="text-[10px] tracking-[0.25em] text-[#d4af37] uppercase">{selectedItem.subtitle}</span>
-                    <h2 className="font-serif text-2xl md:text-3xl tracking-wider text-white mt-1 uppercase">{selectedItem.title}</h2>
-                </div>
-                
-                <div className="flex items-center gap-3 border-y border-gray-900 py-3">
-                    <div className="flex text-[#d4af37] text-xs">★★★★★</div>
-                    <span className="text-gray-500 text-xs tracking-wider">{selectedItem.reviews} Reviews</span>
-                </div>
-
-                <p className="text-gray-400 text-xs leading-relaxed font-light">{selectedItem.description}</p>
-
-                <div className="flex flex-wrap gap-2">
-                    {selectedItem.tags.map(tag => (
-                        <span key={tag} className="border border-gray-800 bg-black text-gray-300 text-[9px] px-3 py-1.5 uppercase tracking-[0.1em]">{tag}</span>
-                    ))}
-                </div>
-
-                {/* Size Selector */}
-                <div>
-                  <p className="text-[10px] text-gray-500 tracking-[0.2em] mb-3">SELECT BOTTLE SIZE</p>
-                  <div className="grid grid-cols-2 gap-3">
-                      <button 
-                          onClick={() => setSelectedSize('50ML')}
-                          className={`p-3.5 border transition-all duration-300 cursor-pointer text-left ${selectedSize === '50ML' ? 'border-[#d4af37] bg-[#d4af37]/5 text-white' : 'border-gray-800 text-gray-500 hover:border-gray-600'}`}
-                      >
-                          <span className="block text-xs tracking-widest mb-1">50 ML</span>
-                          <span className="block text-[#d4af37] text-xs">{selectedItem.price50Str}</span>
-                      </button>
-                      <button 
-                          onClick={() => setSelectedSize('100ML')}
-                          className={`p-3.5 border transition-all duration-300 cursor-pointer text-left ${selectedSize === '100ML' ? 'border-[#d4af37] bg-[#d4af37]/5 text-white' : 'border-gray-800 text-gray-500 hover:border-gray-600'}`}
-                      >
-                          <span className="block text-xs tracking-widest mb-1">100 ML</span>
-                          <span className="block text-[#d4af37] text-xs">{selectedItem.price100Str}</span>
-                      </button>
-                  </div>
+              <div className="mt-6 px-2">
+                <p className="text-[10px] font-semibold tracking-[.2em] text-[#e3bd91]">
+                  {scent.note.toUpperCase()}
+                </p>
+                <div className="mt-2 flex items-center justify-between">
+                  <h3 className="font-serif text-2xl text-white">{scent.name}</h3>
+                  <p className="text-sm font-medium text-[#b5c2b0]">₹ {scent.price.toLocaleString()}</p>
                 </div>
               </div>
+            </button>
+          ))}
+        </div>
+      </div>
 
-              {/* Sticky Action Footer */}
-              <div className="p-6 md:p-8 bg-black border-t border-gray-900 space-y-3 flex-shrink-0">
-                <button 
-                  onClick={handleAddToCart}
-                  className="w-full bg-[#d4af37] text-black font-semibold text-xs tracking-[0.2em] py-4 transition-all duration-300 cursor-pointer uppercase shadow-lg hover:bg-white flex items-center justify-center gap-2 rounded-sm"
-                >
-                  <span>ADD TO CART — {selectedSize === '50ML' ? selectedItem.price50Str : selectedItem.price100Str}</span>
-                </button>
-
-                <button 
-                  onClick={handleProceedCheckout}
-                  className="w-full border border-gray-800 bg-[#080808] hover:border-[#d4af37] text-gray-300 hover:text-[#d4af37] font-semibold text-xs tracking-[0.2em] py-3.5 transition-all duration-300 cursor-pointer uppercase rounded-sm flex items-center justify-center gap-2"
-                >
-                  <span>PROCEED TO CHECKOUT</span>
-                </button>
-
-                <div className="flex justify-between items-center text-[9px] text-gray-500 uppercase tracking-widest pt-1">
-                    <span className="flex items-center gap-1.5"><span className="text-[#d4af37]">✓</span> Free Shipping</span>
-                    <span className="flex items-center gap-1.5"><span className="text-[#d4af37]">✓</span> Secure Pay</span>
-                </div>
-              </div>
-
+      {/* Modal Popup remains mostly the same, just keeping it consistent */}
+      {selected && (
+        <div className="fixed inset-0 z-[70] grid place-items-center bg-[#111513]/90 p-4 backdrop-blur-sm transition-opacity">
+          <div className="relative grid max-h-[90vh] w-full max-w-5xl overflow-y-auto rounded-3xl bg-[#fffaf3] shadow-2xl lg:grid-cols-[1.2fr_.8fr] lg:overflow-hidden animate-in fade-in zoom-in-95 duration-300">
+            <button 
+              onClick={() => { video.current?.pause(); setSelected(null); }} 
+              className="absolute right-4 top-4 z-10 grid h-10 w-10 place-items-center rounded-full bg-black/10 text-xl text-[#47382d] backdrop-blur-md transition hover:bg-black/20"
+            >
+              ×
+            </button>
+            
+            <div className="min-h-[340px] bg-[#1a201c] p-4 lg:min-h-[600px]">
+              <video 
+                ref={video} 
+                src="/perfume/video.mp4" 
+                controls 
+                autoPlay 
+                loop 
+                muted 
+                playsInline 
+                className="h-full w-full rounded-2xl object-cover" 
+              />
             </div>
-
+            
+            <div className="flex flex-col p-8 md:p-12">
+              <p className="text-[10px] font-bold tracking-[.24em] text-[#a7785b]">WATCH THE SCENT FILM</p>
+              <h3 className="mt-3 font-serif text-4xl text-[#342b24]">{selected.name}</h3>
+              <p className="mt-2 text-xs tracking-[.15em] text-[#8d7160]">{selected.note.toUpperCase()}</p>
+              
+              <div className="my-8 h-px bg-[#e8dfd6]" />
+              
+              <p className="text-sm leading-7 text-[#66584e]">{selected.description}</p>
+              
+              <div className="mt-8 flex flex-wrap gap-2">
+                <span className="rounded-full border border-[#d2c3b5] bg-transparent px-4 py-1.5 text-[9px] font-bold tracking-widest text-[#796b60]">EXTRAIT DE PARFUM</span>
+                <span className="rounded-full border border-[#d2c3b5] bg-transparent px-4 py-1.5 text-[9px] font-bold tracking-widest text-[#796b60]">LONG LASTING</span>
+              </div>
+              
+              <div className="mt-auto pt-10">
+                <div className="mb-5 flex items-end justify-between">
+                  <span className="text-xs font-semibold text-[#8c7564]">50 ML</span>
+                  <strong className="font-serif text-3xl text-[#342b24]">₹ {selected.price.toLocaleString()}</strong>
+                </div>
+                <button 
+                  onClick={() => add(selected)} 
+                  className="w-full rounded-xl bg-[#242b27] py-4 text-xs font-bold tracking-[.15em] text-white transition hover:bg-[#1f2622]"
+                >
+                  ADD TO BAG
+                </button>
+                <p className="mt-4 text-center text-[9px] tracking-wider text-[#8f7c6d]">
+                  COMPLIMENTARY SHIPPING · SECURE CHECKOUT
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       )}
     </section>
-  );
+  ); 
 }

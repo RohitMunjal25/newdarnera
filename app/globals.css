@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
 @theme inline {
-  --color-background: #000000;
-  --color-foreground: #ededed;
+  --color-background: #fffdfa;
+  --color-foreground: #342b24;
 }
 
 body {
@@ -16,14 +16,14 @@ body {
   height: 8px;
 }
 ::-webkit-scrollbar-track {
-  background: #0a0a0a; 
+  background: #f1ebe4;
 }
 ::-webkit-scrollbar-thumb {
-  background: #333; 
+  background: #cbb29d;
   border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #d4af37; 
+  background: #9c7253;
 }
 
 /* Hide scrollbar utility class for Watch & Buy Section */

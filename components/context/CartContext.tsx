@@ -3,7 +3,7 @@
 import { createContext, useContext, useState, ReactNode } from "react";
 
 export type CartItem = {
-  id: number;
+  id: string | number;
   name: string;
   subtitle: string;
   price: number;
@@ -16,8 +16,9 @@ type CartContextType = {
   isOpen: boolean;
   setIsOpen: (open: boolean) => void;
   addToCart: (item: Omit<CartItem, "quantity">) => void;
-  updateQuantity: (id: number, delta: number) => void;
-  removeItem: (id: number) => void;
+  updateQuantity: (id: string | number, delta: number) => void;
+  removeItem: (id: string | number) => void;
+  clearCart: () => void;
   totalItems: number;
   subtotal: number;
 };
@@ -41,7 +42,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     setIsOpen(true); // Automatically open drawer when item added
   };
 
-  const updateQuantity = (id: number, delta: number) => {
+  const updateQuantity = (id: string | number, delta: number) => {
     setCart(prev => prev.map(item => {
       if (item.id === id) {
         const newQty = item.quantity + delta;
@@ -51,15 +52,16 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }));
   };
 
-  const removeItem = (id: number) => {
+  const removeItem = (id: string | number) => {
     setCart(prev => prev.filter(item => item.id !== id));
   };
+  const clearCart = () => setCart([]);
 
   const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
   const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
   return (
-    <CartContext.Provider value={{ cart, isOpen, setIsOpen, addToCart, updateQuantity, removeItem, totalItems, subtotal }}>
+    <CartContext.Provider value={{ cart, isOpen, setIsOpen, addToCart, updateQuantity, removeItem, clearCart, totalItems, subtotal }}>
       {children}
     </CartContext.Provider>
   );
