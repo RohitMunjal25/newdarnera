@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 
 export type CartItem = {
   id: string | number;
@@ -28,6 +28,19 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 export function CartProvider({ children }: { children: ReactNode }) {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isOpen, setIsOpen] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("darnera_cart");
+      if (saved) setCart(JSON.parse(saved));
+    } catch { localStorage.removeItem("darnera_cart"); }
+    setHydrated(true);
+  }, []);
+
+  useEffect(() => {
+    if (hydrated) localStorage.setItem("darnera_cart", JSON.stringify(cart));
+  }, [cart, hydrated]);
 
   const addToCart = (product: Omit<CartItem, "quantity">) => {
     setCart(prev => {
@@ -55,7 +68,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const removeItem = (id: string | number) => {
     setCart(prev => prev.filter(item => item.id !== id));
   };
-  const clearCart = () => setCart([]);
+  const clearCart = () => { setCart([]); localStorage.removeItem("darnera_cart"); };
 
   const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
   const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);

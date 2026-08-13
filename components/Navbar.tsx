@@ -35,7 +35,7 @@ export default function Navbar() {
           <Link href="/collection" className="hover:text-[#b88962] transition-colors">COLLECTION</Link>
           <Link href="/collection?category=him" className="hover:text-[#b88962] transition-colors">FOR HIM</Link>
           <Link href="/collection?category=her" className="hover:text-[#b88962] transition-colors">FOR HER</Link>
-          <Link href="/collection?category=gift" className="hover:text-[#b88962] transition-colors">GIFT BOXES</Link>
+          <Link href="/discovery-packs" className="hover:text-[#b88962] transition-colors">DISCOVERY PACKS</Link>
         </div>
 
         {/* Action Icons */}

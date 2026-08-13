@@ -13,7 +13,7 @@ type AuthContextType = {
   user: User | null;
   isAuthOpen: boolean;
   authMode: AuthMode;
-  openAuth: (mode: AuthMode) => void;
+  openAuth: (mode: AuthMode, redirectTo?: string) => void;
   closeAuth: () => void;
   login: (email: string, password: string) => Promise<void>;
   requestRegisterOtp: (payload: RegisterPayload) => Promise<OtpResponse>;
@@ -48,6 +48,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(data.user);
     setIsLoggedIn(true);
     setIsAuthOpen(false);
+    const redirectTo = localStorage.getItem("post_auth_redirect");
+    if (redirectTo) {
+      localStorage.removeItem("post_auth_redirect");
+      window.location.assign(redirectTo);
+    }
   };
 
   return (
@@ -57,7 +62,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user,
         isAuthOpen,
         authMode,
-        openAuth: (mode) => {
+        openAuth: (mode, redirectTo) => {
+          if (redirectTo) localStorage.setItem("post_auth_redirect", redirectTo);
           setAuthMode(mode);
           setIsAuthOpen(true);
         },
