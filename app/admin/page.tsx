@@ -21,7 +21,7 @@ type Order = {
   userId?: { name: string; email: string }; 
   createdAt: string;
   items?: OrderItem[];
-  products?: OrderItem[]; // Purane orders ke liye fallback
+  products?: OrderItem[]; 
   shippingAddress?: { fullName: string; phone: string; address: string; city: string; state: string; pincode: string };
 };
 
@@ -38,6 +38,11 @@ export default function AdminPage() {
   const [coupon, setCoupon] = useState({ code: "", discountType: "percentage", discountValue: "", usageLimit: "", endDate: "" });
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   
+  // State for manual updates in the modal
+  const [updatePaymentStatus, setUpdatePaymentStatus] = useState("");
+  const [updateOrderStatus, setUpdateOrderStatus] = useState("");
+  const [isUpdatingOrder, setIsUpdatingOrder] = useState(false);
+
   const load = useCallback(async () => { 
     const auth = token(); 
     if (!auth) { setError("Please log in with your admin account first."); setReady(true); return; } 
@@ -65,6 +70,14 @@ export default function AdminPage() {
   }, []);
   
   useEffect(() => { load(); }, [load]);
+
+  // Reset update states when modal opens
+  useEffect(() => {
+    if (selectedOrder) {
+      setUpdatePaymentStatus(selectedOrder.paymentStatus);
+      setUpdateOrderStatus(selectedOrder.orderStatus);
+    }
+  }, [selectedOrder]);
   
   const resetProduct = () => { 
     setProduct({ name: "", brand: "", description: "", category: "unisex", price: "", stock: "", bottleSizeMl: "", images: "", coverImage: "", forHim: false, forHer: false, unisex: true, featured: false }); 
@@ -130,6 +143,29 @@ export default function AdminPage() {
       setError(err instanceof Error ? err.message : "Order could not be updated."); 
     } 
   }
+
+  // NAYA FUNCTION: Manual update via modal
+  async function manualUpdateOrder() {
+    if (!selectedOrder) return;
+    setIsUpdatingOrder(true);
+    try {
+      await api(`/api/orders/admin/${selectedOrder._id}`, { 
+        method: "PATCH", 
+        token: token(), 
+        body: JSON.stringify({ 
+          paymentStatus: updatePaymentStatus,
+          orderStatus: updateOrderStatus
+        }) 
+      });
+      await load();
+      setSelectedOrder(null); // Close modal on success
+      alert("Order updated successfully!");
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to update order.");
+    } finally {
+      setIsUpdatingOrder(false);
+    }
+  }
   
   async function resolve(ticket: Ticket) { 
     const resolutionNote = window.prompt("Resolution note for customer", ""); 
@@ -146,7 +182,7 @@ export default function AdminPage() {
   
   if (error && !stats.totalOrders) return <main className="grid min-h-screen place-items-center bg-[#f7f5f0] p-6"><div className="max-w-md rounded-3xl bg-white p-8 text-center shadow-sm"><p className="mb-4 text-lg">{error}</p><p className="text-sm text-[#887b70]">Login from the storefront with your admin email, then return here.</p><Link href="/" className="mt-6 inline-block rounded-full bg-[#312820] px-6 py-3 text-sm text-white">Go to storefront</Link></div></main>;
   
-  const metrics = [{ label: "Total sales", value: money(stats.totalSales), note: "Paid orders" }, { label: "Orders", value: stats.totalOrders || 0, note: "All time" }, { label: "Pending shipment", value: stats.pendingOrders || 0, note: "Needs attention" }, { label: "Returns", value: stats.returnOrders || 0, note: "Cancelled / returned" }];
+  const metrics = [{ label: "Total sales", value: money(stats.totalSales), note: "Delivered orders" }, { label: "Orders", value: stats.totalOrders || 0, note: "All time" }, { label: "Pending shipment", value: stats.pendingOrders || 0, note: "Needs attention" }, { label: "Returns", value: stats.returnOrders || 0, note: "Cancelled / returned" }];
   
   return (
     <main className="relative min-h-screen bg-[#f7f5f0] text-[#3a3029]">
@@ -325,7 +361,7 @@ export default function AdminPage() {
         </section>
       </div>
 
-      {/* Order Details Modal */}
+      {/* Order Details Modal with Manual Update Options */}
       {selectedOrder && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm" onClick={() => setSelectedOrder(null)}>
           <div className="max-w-2xl w-full max-h-[90vh] overflow-y-auto rounded-3xl bg-white p-6 md:p-8 shadow-2xl" onClick={(e) => e.stopPropagation()}>
@@ -363,8 +399,6 @@ export default function AdminPage() {
                 <div>
                   <p className="text-[10px] font-bold tracking-[.15em] text-[#a88a70] uppercase">Order Summary</p>
                   <div className="mt-1 space-y-2 text-sm bg-[#faf7f2] p-3 rounded-xl border border-[#eee7df]">
-                    <div className="flex justify-between"><span className="text-[#705846]">Status:</span> <span className="capitalize font-medium">{selectedOrder.orderStatus}</span></div>
-                    <div className="flex justify-between"><span className="text-[#705846]">Payment:</span> <span className="capitalize font-medium">{selectedOrder.paymentStatus}</span></div>
                     <div className="flex justify-between"><span className="text-[#705846]">Date:</span> <span>{new Date(selectedOrder.createdAt).toLocaleDateString("en-IN")}</span></div>
                     <div className="flex justify-between border-t border-[#dfd4c8] pt-2 font-bold"><span className="text-[#705846]">Total:</span> <span>{money(selectedOrder.finalAmount || selectedOrder.totalAmount)}</span></div>
                   </div>
@@ -379,6 +413,50 @@ export default function AdminPage() {
                     </div>
                   </div>
                 )}
+              </div>
+            </div>
+
+            {/* Manual Update Section */}
+            <div className="mt-6 rounded-xl border border-[#e3d9cf] bg-[#faf7f2] p-4">
+              <p className="text-[10px] font-bold tracking-[.15em] text-[#a88a70] uppercase mb-3">Update Order Status</p>
+              <div className="flex flex-col sm:flex-row gap-4">
+                <label className="flex-1 text-xs text-[#796b60]">
+                  Payment Status
+                  <select 
+                    value={updatePaymentStatus} 
+                    onChange={(e) => setUpdatePaymentStatus(e.target.value)}
+                    className="mt-1 w-full rounded-lg border border-[#e3d9cf] p-2 text-sm outline-none focus:border-[#9b765a]"
+                  >
+                    <option value="pending">Pending</option>
+                    <option value="paid">Paid</option>
+                    <option value="failed">Failed</option>
+                  </select>
+                </label>
+                <label className="flex-1 text-xs text-[#796b60]">
+                  Order Status
+                  <select 
+                    value={updateOrderStatus} 
+                    onChange={(e) => setUpdateOrderStatus(e.target.value)}
+                    className="mt-1 w-full rounded-lg border border-[#e3d9cf] p-2 text-sm outline-none focus:border-[#9b765a]"
+                  >
+                    <option value="pending">Pending</option>
+                    <option value="processing">Processing</option>
+                    <option value="packed">Packed</option>
+                    <option value="shipped">Shipped</option>
+                    <option value="delivered">Delivered</option>
+                    <option value="cancelled">Cancelled</option>
+                    <option value="returned">Returned</option>
+                  </select>
+                </label>
+              </div>
+              <div className="mt-4 flex justify-end">
+                <button 
+                  onClick={manualUpdateOrder}
+                  disabled={isUpdatingOrder || (updatePaymentStatus === selectedOrder.paymentStatus && updateOrderStatus === selectedOrder.orderStatus)}
+                  className="rounded-lg bg-[#312820] px-4 py-2 text-xs text-white disabled:opacity-50"
+                >
+                  {isUpdatingOrder ? "Updating..." : "Save Changes"}
+                </button>
               </div>
             </div>
 
