@@ -22,6 +22,7 @@ type Order = {
   createdAt: string;
   items?: OrderItem[];
   products?: OrderItem[]; // Purane orders ke liye fallback
+  shippingAddress?: { fullName: string; phone: string; address: string; city: string; state: string; pincode: string };
 };
 
 type Coupon = { _id: string; code: string; discountType: string; discountValue: number; usageLimit?: number; usedCount: number };
@@ -35,6 +36,7 @@ export default function AdminPage() {
   const [stats, setStats] = useState<Record<string, number>>({}), [products, setProducts] = useState<Product[]>([]), [orders, setOrders] = useState<Order[]>([]), [coupons, setCoupons] = useState<Coupon[]>([]), [tickets, setTickets] = useState<Ticket[]>([]), [subscribers, setSubscribers] = useState<{ _id: string; email: string; createdAt: string }[]>([]);
   const [product, setProduct] = useState({ name: "", brand: "", description: "", category: "unisex", price: "", stock: "", bottleSizeMl: "", images: "", coverImage: "", forHim: false, forHer: false, unisex: true, featured: false }), [editingProductId, setEditingProductId] = useState<string | null>(null);
   const [coupon, setCoupon] = useState({ code: "", discountType: "percentage", discountValue: "", usageLimit: "", endDate: "" });
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   
   const load = useCallback(async () => { 
     const auth = token(); 
@@ -112,8 +114,15 @@ export default function AdminPage() {
   async function ship(order: Order) { 
     const trackingLink = window.prompt("Tracking URL", order.trackingLink || ""); 
     if (trackingLink === null) return; 
+    
     const courierName = window.prompt("Courier partner", order.courierName || ""); 
     if (courierName === null) return; 
+
+    if (!trackingLink.trim() || !courierName.trim()) {
+      alert("Validation Failed: Tracking URL and Courier Name cannot be empty.");
+      return;
+    }
+
     try { 
       await api(`/api/orders/admin/${order._id}`, { method: "PATCH", token: token(), body: JSON.stringify({ orderStatus: "shipped", trackingLink, courierName }) }); 
       await load(); 
@@ -140,7 +149,7 @@ export default function AdminPage() {
   const metrics = [{ label: "Total sales", value: money(stats.totalSales), note: "Paid orders" }, { label: "Orders", value: stats.totalOrders || 0, note: "All time" }, { label: "Pending shipment", value: stats.pendingOrders || 0, note: "Needs attention" }, { label: "Returns", value: stats.returnOrders || 0, note: "Cancelled / returned" }];
   
   return (
-    <main className="min-h-screen bg-[#f7f5f0] text-[#3a3029]">
+    <main className="relative min-h-screen bg-[#f7f5f0] text-[#3a3029]">
       <div className="mx-auto flex max-w-[1600px]">
         <aside className="sticky top-0 hidden h-screen w-64 shrink-0 border-r border-[#e6ded5] bg-[#fffdfa] p-6 lg:block">
           <Link href="/" className="mb-12 block font-serif text-2xl tracking-[.22em]">DARNERA</Link>
@@ -173,7 +182,7 @@ export default function AdminPage() {
                   </article>
                 ))}
               </div>
-              <Panel title="Recent orders"><Orders orders={orders.slice(0, 6)} onShip={ship} /></Panel>
+              <Panel title="Recent orders"><Orders orders={orders.slice(0, 6)} onShip={ship} onView={setSelectedOrder} /></Panel>
             </>
           )}
           
@@ -245,7 +254,7 @@ export default function AdminPage() {
             </div>
           )}
           
-          {view === "orders" && <Panel title="All orders"><Orders orders={orders} onShip={ship} /></Panel>}
+          {view === "orders" && <Panel title="All orders"><Orders orders={orders} onShip={ship} onView={setSelectedOrder} /></Panel>}
           
           {view === "coupons" && (
             <div className="grid gap-6 xl:grid-cols-[1fr_340px]">
@@ -315,6 +324,87 @@ export default function AdminPage() {
           {view === "content" && <><AdminContentManager /><DiscoveryPackManagerV2 /></>}
         </section>
       </div>
+
+      {/* Order Details Modal */}
+      {selectedOrder && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm" onClick={() => setSelectedOrder(null)}>
+          <div className="max-w-2xl w-full max-h-[90vh] overflow-y-auto rounded-3xl bg-white p-6 md:p-8 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            
+            <div className="mb-6 flex items-start justify-between border-b border-[#eee7df] pb-4">
+              <div>
+                <h3 className="font-serif text-2xl text-[#3a3029]">Order Details</h3>
+                <p className="mt-1 text-xs text-[#8d7e70]">ID: {selectedOrder._id}</p>
+              </div>
+              <button onClick={() => setSelectedOrder(null)} className="rounded-full bg-[#f3eee7] px-4 py-2 text-xs font-semibold text-[#705846]">Close</button>
+            </div>
+
+            <div className="grid gap-6 md:grid-cols-2">
+              <div className="space-y-4">
+                <div>
+                  <p className="text-[10px] font-bold tracking-[.15em] text-[#a88a70] uppercase">Customer Info</p>
+                  <p className="mt-1 text-sm font-medium">{selectedOrder.userId?.name || "Guest User"}</p>
+                  <p className="text-sm text-[#705846]">{selectedOrder.userId?.email}</p>
+                </div>
+                
+                {selectedOrder.shippingAddress && (
+                  <div>
+                    <p className="text-[10px] font-bold tracking-[.15em] text-[#a88a70] uppercase">Shipping Address</p>
+                    <div className="mt-1 text-sm text-[#4a3f35] bg-[#faf7f2] p-3 rounded-xl border border-[#eee7df]">
+                      <p className="font-medium">{selectedOrder.shippingAddress.fullName}</p>
+                      <p>Phone: {selectedOrder.shippingAddress.phone}</p>
+                      <p className="mt-2">{selectedOrder.shippingAddress.address}</p>
+                      <p>{selectedOrder.shippingAddress.city}, {selectedOrder.shippingAddress.state} - {selectedOrder.shippingAddress.pincode}</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <p className="text-[10px] font-bold tracking-[.15em] text-[#a88a70] uppercase">Order Summary</p>
+                  <div className="mt-1 space-y-2 text-sm bg-[#faf7f2] p-3 rounded-xl border border-[#eee7df]">
+                    <div className="flex justify-between"><span className="text-[#705846]">Status:</span> <span className="capitalize font-medium">{selectedOrder.orderStatus}</span></div>
+                    <div className="flex justify-between"><span className="text-[#705846]">Payment:</span> <span className="capitalize font-medium">{selectedOrder.paymentStatus}</span></div>
+                    <div className="flex justify-between"><span className="text-[#705846]">Date:</span> <span>{new Date(selectedOrder.createdAt).toLocaleDateString("en-IN")}</span></div>
+                    <div className="flex justify-between border-t border-[#dfd4c8] pt-2 font-bold"><span className="text-[#705846]">Total:</span> <span>{money(selectedOrder.finalAmount || selectedOrder.totalAmount)}</span></div>
+                  </div>
+                </div>
+
+                {selectedOrder.trackingLink && (
+                  <div>
+                    <p className="text-[10px] font-bold tracking-[.15em] text-[#a88a70] uppercase">Tracking Info</p>
+                    <div className="mt-1 text-sm bg-emerald-50 p-3 rounded-xl border border-emerald-100">
+                      <p><span className="text-emerald-800 font-medium">Courier:</span> {selectedOrder.courierName}</p>
+                      <a href={selectedOrder.trackingLink} target="_blank" className="mt-1 inline-block text-emerald-700 underline text-xs">Open Tracking Link</a>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="mt-8 pt-6 border-t border-[#eee7df]">
+              <p className="text-[10px] font-bold tracking-[.15em] text-[#a88a70] uppercase mb-4">Items Ordered</p>
+              <div className="space-y-3">
+                {(selectedOrder.items || selectedOrder.products || []).map((item, i) => (
+                  <div key={i} className="flex justify-between items-center p-3 rounded-xl border border-[#eee7df] bg-[#fffdfa]">
+                    <div>
+                      <p className="text-sm font-medium text-[#3a3029]">{item.name || item.title || "Product"}</p>
+                      {item.subtitle && <p className="text-xs text-[#8d7e70] mt-0.5">{item.subtitle}</p>}
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm text-[#3a3029]">{item.quantity} x {item.price ? money(item.price) : "N/A"}</p>
+                      {item.price && (
+                        <p className="text-xs font-bold text-[#705846] mt-0.5">Total: {money(item.quantity * item.price)}</p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+          </div>
+        </div>
+      )}
     </main>
   );
 }
@@ -330,17 +420,17 @@ function Input({ label, value, set, type = "text", required = false }: { label: 
 
 function Panel({ title, children }: { title: string; children: React.ReactNode }) { 
   return (
-    <section className="mt-8 rounded-2xl border border-[#ebe3da] bg-white p-6">
+    <section className="mt-8 rounded-2xl border border-[#ebe3da] bg-white p-6 shadow-sm">
       <h2 className="mb-5 font-serif text-xl">{title}</h2>
       {children}
     </section>
   ); 
 }
 
-function Orders({ orders, onShip }: { orders: Order[]; onShip: (o: Order) => void }) { 
+function Orders({ orders, onShip, onView }: { orders: Order[]; onShip: (o: Order) => void; onView: (o: Order) => void }) { 
   return (
     <div className="overflow-x-auto">
-      <table className="w-full min-w-[800px] text-left text-sm">
+      <table className="w-full min-w-[900px] text-left text-sm">
         <thead className="border-b border-[#eee7df] text-xs text-[#948579]">
           <tr>
             <th className="pb-3">Customer</th>
@@ -349,7 +439,7 @@ function Orders({ orders, onShip }: { orders: Order[]; onShip: (o: Order) => voi
             <th className="pb-3">Payment</th>
             <th className="pb-3">Status</th>
             <th className="pb-3">Total</th>
-            <th />
+            <th className="pb-3 text-right">Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -357,9 +447,9 @@ function Orders({ orders, onShip }: { orders: Order[]; onShip: (o: Order) => voi
             const orderItems = o.items || o.products || [];
 
             return (
-              <tr key={o._id} className="border-b border-[#f3eee9]">
+              <tr key={o._id} className="border-b border-[#f3eee9] hover:bg-[#faf7f2] transition-colors">
                 <td className="py-4 align-top">
-                  <p>{o.userId?.name || "Customer"}</p>
+                  <p className="font-medium">{o.userId?.name || "Customer"}</p>
                   <p className="text-xs text-[#97887b]">{o.userId?.email}</p>
                 </td>
                 <td className="py-4 align-top">
@@ -376,19 +466,25 @@ function Orders({ orders, onShip }: { orders: Order[]; onShip: (o: Order) => voi
                     <span className="text-xs text-[#97887b]">No items recorded</span>
                   )}
                 </td>
-                <td className="py-4 align-top">{new Date(o.createdAt).toLocaleDateString("en-IN")}</td>
-                <td className="py-4 align-top capitalize">{o.paymentStatus}</td>
-                <td className="py-4 align-top capitalize">{o.orderStatus}</td>
-                <td className="py-4 align-top">{money(o.finalAmount || o.totalAmount)}</td>
+                <td className="py-4 align-top text-[#705846]">{new Date(o.createdAt).toLocaleDateString("en-IN")}</td>
+                <td className="py-4 align-top capitalize text-[#705846]">{o.paymentStatus}</td>
                 <td className="py-4 align-top">
-                  {o.trackingLink ? (
-                    <div className="text-xs">
-                      <p>{o.courierName || "Courier"}</p>
-                      <a href={o.trackingLink} target="_blank" className="text-[#705846] underline">Tracking saved</a>
-                    </div>
-                  ) : (
-                    <button onClick={() => onShip(o)} className="rounded-lg border border-[#decfc1] px-3 py-2 text-xs text-[#705846]">Ship / Track</button>
-                  )}
+                  <span className={`px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider ${o.orderStatus === 'shipped' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}`}>
+                    {o.orderStatus}
+                  </span>
+                </td>
+                <td className="py-4 align-top font-medium">{money(o.finalAmount || o.totalAmount)}</td>
+                <td className="py-4 align-top text-right">
+                  <div className="flex items-center justify-end gap-2">
+                    <button onClick={() => onView(o)} className="rounded-lg border border-[#decfc1] bg-white px-3 py-1.5 text-xs font-medium text-[#705846] hover:bg-[#f3eee7] transition-colors">
+                      View
+                    </button>
+                    {!o.trackingLink && (
+                      <button onClick={() => onShip(o)} className="rounded-lg bg-[#342b24] px-3 py-1.5 text-xs font-medium text-white hover:bg-[#1a1511] transition-colors">
+                        Ship
+                      </button>
+                    )}
+                  </div>
                 </td>
               </tr>
             );
