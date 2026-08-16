@@ -123,15 +123,31 @@ export default function AdminPage() {
       setError(err instanceof Error ? err.message : "Coupon could not be saved."); 
     } 
   }
+
+  // ---> NAYA FUNCTION: Coupon Delete Karne Ke Liye <---
+  async function removeCoupon(id: string) {
+    if (!window.confirm("Are you sure you want to delete this coupon?")) return;
+    try {
+      await api(`/api/coupons/${id}`, { method: "DELETE", token: token() });
+      await load();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Coupon could not be deleted.");
+    }
+  }
   
   async function ship(order: Order) { 
-    const trackingLink = window.prompt("Tracking URL", order.trackingLink || ""); 
+    let trackingLink = window.prompt("Tracking URL", order.trackingLink || ""); 
     if (trackingLink === null) return; 
     
+    trackingLink = trackingLink.trim();
+    if (trackingLink && !trackingLink.startsWith('http://') && !trackingLink.startsWith('https://')) {
+      trackingLink = `https://${trackingLink}`;
+    }
+
     const courierName = window.prompt("Courier partner", order.courierName || ""); 
     if (courierName === null) return; 
 
-    if (!trackingLink.trim() || !courierName.trim()) {
+    if (!trackingLink || !courierName.trim()) {
       alert("Validation Failed: Tracking URL and Courier Name cannot be empty.");
       return;
     }
@@ -144,7 +160,6 @@ export default function AdminPage() {
     } 
   }
 
-  // NAYA FUNCTION: Manual update via modal
   async function manualUpdateOrder() {
     if (!selectedOrder) return;
     setIsUpdatingOrder(true);
@@ -158,8 +173,8 @@ export default function AdminPage() {
         }) 
       });
       await load();
-      setSelectedOrder(null); // Close modal on success
-      alert("Order updated successfully!");
+      setSelectedOrder(null); 
+      alert("Order status updated successfully!");
     } catch (err) {
       alert(err instanceof Error ? err.message : "Failed to update order.");
     } finally {
@@ -297,10 +312,17 @@ export default function AdminPage() {
               <Panel title="Active coupons">
                 <div className="grid gap-3 sm:grid-cols-2">
                   {coupons.map((c) => (
-                    <article key={c._id} className="rounded-xl border border-[#eee7df] p-4">
-                      <p className="font-semibold tracking-wider">{c.code}</p>
-                      <p className="mt-2 text-sm">{c.discountValue}{c.discountType === "percentage" ? "%" : " ₹"} off</p>
-                      <p className="mt-2 text-xs text-[#907f71]">Used {c.usedCount}{c.usageLimit ? ` / ${c.usageLimit}` : ""}</p>
+                    <article key={c._id} className="rounded-xl border border-[#eee7df] p-4 flex flex-col justify-between">
+                      <div>
+                        <p className="font-semibold tracking-wider">{c.code}</p>
+                        <p className="mt-2 text-sm">{c.discountValue}{c.discountType === "percentage" ? "%" : " ₹"} off</p>
+                      </div>
+                      <div className="mt-4 flex items-center justify-between border-t border-[#f3eee9] pt-3">
+                        <p className="text-xs text-[#907f71]">Used {c.usedCount}{c.usageLimit ? ` / ${c.usageLimit}` : ""}</p>
+                        <button onClick={() => removeCoupon(c._id)} className="text-[10px] uppercase font-bold tracking-wider text-red-500 hover:text-red-700 transition-colors">
+                          Delete
+                        </button>
+                      </div>
                     </article>
                   ))}
                 </div>
@@ -399,6 +421,8 @@ export default function AdminPage() {
                 <div>
                   <p className="text-[10px] font-bold tracking-[.15em] text-[#a88a70] uppercase">Order Summary</p>
                   <div className="mt-1 space-y-2 text-sm bg-[#faf7f2] p-3 rounded-xl border border-[#eee7df]">
+                    <div className="flex justify-between"><span className="text-[#705846]">Status:</span> <span className="capitalize font-medium">{selectedOrder.orderStatus}</span></div>
+                    <div className="flex justify-between"><span className="text-[#705846]">Payment:</span> <span className="capitalize font-medium">{selectedOrder.paymentStatus}</span></div>
                     <div className="flex justify-between"><span className="text-[#705846]">Date:</span> <span>{new Date(selectedOrder.createdAt).toLocaleDateString("en-IN")}</span></div>
                     <div className="flex justify-between border-t border-[#dfd4c8] pt-2 font-bold"><span className="text-[#705846]">Total:</span> <span>{money(selectedOrder.finalAmount || selectedOrder.totalAmount)}</span></div>
                   </div>
@@ -409,14 +433,20 @@ export default function AdminPage() {
                     <p className="text-[10px] font-bold tracking-[.15em] text-[#a88a70] uppercase">Tracking Info</p>
                     <div className="mt-1 text-sm bg-emerald-50 p-3 rounded-xl border border-emerald-100">
                       <p><span className="text-emerald-800 font-medium">Courier:</span> {selectedOrder.courierName}</p>
-                      <a href={selectedOrder.trackingLink} target="_blank" className="mt-1 inline-block text-emerald-700 underline text-xs">Open Tracking Link</a>
+                      <a 
+                        href={selectedOrder.trackingLink.startsWith('http') ? selectedOrder.trackingLink : `https://${selectedOrder.trackingLink}`} 
+                        target="_blank" 
+                        rel="noopener noreferrer" 
+                        className="mt-1 inline-block text-emerald-700 underline text-xs"
+                      >
+                        Open Tracking Link
+                      </a>
                     </div>
                   </div>
                 )}
               </div>
             </div>
 
-            {/* Manual Update Section */}
             <div className="mt-6 rounded-xl border border-[#e3d9cf] bg-[#faf7f2] p-4">
               <p className="text-[10px] font-bold tracking-[.15em] text-[#a88a70] uppercase mb-3">Update Order Status</p>
               <div className="flex flex-col sm:flex-row gap-4">
@@ -453,7 +483,7 @@ export default function AdminPage() {
                 <button 
                   onClick={manualUpdateOrder}
                   disabled={isUpdatingOrder || (updatePaymentStatus === selectedOrder.paymentStatus && updateOrderStatus === selectedOrder.orderStatus)}
-                  className="rounded-lg bg-[#312820] px-4 py-2 text-xs text-white disabled:opacity-50"
+                  className="rounded-lg bg-[#312820] px-4 py-2 text-xs text-white disabled:opacity-50 hover:bg-[#1a1511] transition-colors"
                 >
                   {isUpdatingOrder ? "Updating..." : "Save Changes"}
                 </button>

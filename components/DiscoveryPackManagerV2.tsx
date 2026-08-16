@@ -25,7 +25,7 @@ export default function DiscoveryPackManagerV2() {
           ...form, 
           price: Number(form.price), 
           bottleCount: Number(form.bottleCount),
-          bottleSizeMl: Number(form.bottleSizeMl) // Naya field backend jayega
+          bottleSizeMl: Number(form.bottleSizeMl) 
         }) 
       }); 
       setForm(blank); 
@@ -38,7 +38,7 @@ export default function DiscoveryPackManagerV2() {
   } 
   
   async function remove(id: string) { 
-    if (!confirm("Delete this discovery pack?")) return; 
+    if (!window.confirm("Delete this discovery pack?")) return; 
     await api(`/api/discovery-packs/${id}`, { method: "DELETE", token: token() }); 
     load(); 
   } 
@@ -55,7 +55,17 @@ export default function DiscoveryPackManagerV2() {
                 Set of {pack.bottleCount} ({pack.bottleSizeMl || 18} ML each) · ₹ {pack.price.toLocaleString()}
               </p>
               <div className="mt-4 flex gap-2">
-                <button onClick={() => { setEditing(pack._id); setForm({ name: pack.name, description: pack.description, price: String(pack.price), image: pack.image, bottleCount: String(pack.bottleCount), bottleSizeMl: String(pack.bottleSizeMl || "") }) }} className="rounded-lg border px-3 py-2 text-xs">Edit</button>
+                <button onClick={() => { 
+                  setEditing(pack._id); 
+                  setForm({ 
+                    name: pack.name, 
+                    description: pack.description, 
+                    price: String(pack.price), 
+                    image: pack.image, 
+                    bottleCount: String(pack.bottleCount), 
+                    bottleSizeMl: String(pack.bottleSizeMl || 18) 
+                  }); 
+                }} className="rounded-lg border px-3 py-2 text-xs">Edit</button>
                 <button onClick={() => remove(pack._id)} className="rounded-lg border border-red-200 px-3 py-2 text-xs text-red-700">Delete</button>
               </div>
             </article>
@@ -66,7 +76,6 @@ export default function DiscoveryPackManagerV2() {
       <form onSubmit={save} className="rounded-2xl border border-[#ebe3da] bg-white p-6">
         <h2 className="font-serif text-xl">{editing ? "Update" : "Add"} discovery pack</h2>
         
-        {/* Yahan Box labels me clarity de di hai taaki mistake na ho */}
         {([
           ['Pack name', 'name', 'text'],
           ['Kitni bottles ka set hai? (e.g. 4 ya 8)', 'bottleCount', 'number'],
