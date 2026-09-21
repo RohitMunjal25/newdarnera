@@ -44,6 +44,7 @@ export default function OrderDetailPage() {
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [trackingNotice, setTrackingNotice] = useState(false);
 
   useEffect(() => {
     if (!params.id) return;
@@ -133,24 +134,18 @@ export default function OrderDetailPage() {
             <section className="mt-5 rounded-3xl border border-[#eadfd4] bg-white p-6">
               <h2 className="font-serif text-2xl">Tracking</h2>
               <TrackingTimeline status={order.orderStatus} />
-              {order.courierName && <p className="mt-2 text-sm text-[#806f63]">Courier: {order.courierName}</p>}
-              {order.trackingEmbedSrc ? (
-                <iframe
-                  title="Order tracking"
-                  src={order.trackingEmbedSrc}
-                  className="mt-5 min-h-[420px] w-full rounded-2xl border border-[#eadfd4]"
-                />
-              ) : order.trackingLink ? (
+              {order.courierName && <p className="mt-5 text-sm text-[#806f63]">Courier partner: <span className="font-medium text-[#342a22]">{order.courierName}</span></p>}
+              {order.trackingLink ? (
                 <a
                   href={order.trackingLink}
                   target="_blank"
                   rel="noreferrer"
-                  className="mt-5 inline-block rounded-full bg-[#312820] px-5 py-3 text-sm text-white"
+                  className="mt-5 inline-flex items-center gap-2 rounded-full bg-[#312820] px-5 py-3 text-sm text-white"
                 >
-                  Track package
+                  Track now <span>→</span>
                 </a>
               ) : (
-                <p className="mt-4 text-sm text-[#806f63]">Tracking will show here once your order is shipped.</p>
+                <><button type="button" onClick={() => setTrackingNotice(true)} className="mt-5 inline-flex items-center gap-2 rounded-full border border-[#cbb8a8] px-5 py-3 text-sm text-[#624d3d]">Track now <span>→</span></button>{trackingNotice && <p className="mt-3 rounded-xl bg-[#f5eadf] p-3 text-sm text-[#705846]">Tracking will update when your order is shipped.</p>}</>
               )}
             </section>
 
@@ -170,10 +165,10 @@ export default function OrderDetailPage() {
 }
 
 function TrackingTimeline({ status }: { status: string }) {
-  const steps = ["ordered", "processing", "packed", "shipped", "delivered"];
-  const active = status === "cancelled" ? -1 : Math.max(0, steps.indexOf(status));
+  const steps = ["Ordered", "Shipped", "Delivered"];
+  const active = status === "delivered" ? 2 : status === "shipped" ? 1 : 0;
   if (status === "cancelled") return <p className="mt-4 rounded-xl bg-red-50 p-4 text-sm text-red-700">This order has been cancelled.</p>;
-  return <div className="mt-5 grid gap-3 sm:grid-cols-5">{steps.map((step, index) => <div key={step} className={`rounded-xl border p-3 text-center text-xs capitalize ${index <= active ? "border-[#b88962] bg-[#f5eadf] text-[#513c2d]" : "border-[#eadfd4] text-[#9a8b7e]"}`}>{index <= active ? "✓ " : ""}{step === "shipped" ? "On the way" : step}</div>)}</div>;
+  return <div className="mt-8"><div className="relative mx-5 h-1 rounded-full bg-[#eadfd4]"><div className="h-full rounded-full bg-[#b88962] transition-all duration-700" style={{ width: `${active * 50}%` }} />{steps.map((step,index) => <div key={step} className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2" style={{ left: `${index * 50}%` }}><div className={`grid h-10 w-10 place-items-center rounded-full border-4 border-white text-sm shadow-sm ${index <= active ? "bg-[#b88962] text-white" : "bg-[#f4eee7] text-[#a09286]"}`}>{index === 1 ? "🚚" : index <= active ? "✓" : "○"}</div><p className={`mt-3 whitespace-nowrap text-center text-xs font-semibold ${index <= active ? "text-[#4f3b2d]" : "text-[#9a8b7e]"}`}>{step}</p></div>)}</div><p className="mt-12 text-center text-xs text-[#806f63]">{active === 0 ? "Your order is confirmed and will be updated once it ships." : active === 1 ? "Your order is on the way." : "Your order has been delivered."}</p></div>;
 }
 
 function Row({ label, value }: { label: string; value: string }) {
