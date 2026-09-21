@@ -42,11 +42,11 @@ export default function CheckoutPage() {
   const applyCoupon = async () => {
     if (!couponCode.trim()) return;
     try {
-      const res = await api<{ discountValue?: number; discount?: number }>(`/api/coupons/apply`, {
+      const res = await api<{ discountAmount?: number; discount?: number }>(`/api/coupons/validate`, {
         method: "POST",
-        body: JSON.stringify({ code: couponCode, totalAmount: subtotal })
+        body: JSON.stringify({ code: couponCode, subtotal })
       });
-      const val = res.discountValue || res.discount || 100;
+      const val = res.discountAmount || res.discount || 0;
       setDiscount(val);
       setCouponMessage("Coupon applied successfully!");
       setError("");
@@ -72,6 +72,7 @@ export default function CheckoutPage() {
           products: cart.map((item) => ({ name: item.name, image: item.image, price: item.price, quantity: item.quantity, subtitle: item.subtitle })), 
           totalAmount: subtotal, 
           finalAmount: finalPayable, 
+          couponCode: discount > 0 ? couponCode : undefined,
           shippingAddress: form, 
           paymentStatus: "pending", 
           orderStatus: "pending" 

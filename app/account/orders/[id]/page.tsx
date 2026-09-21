@@ -24,13 +24,10 @@ type Order = {
   discountAmount?: number;
   finalAmount?: number;
   couponCode?: string;
-  paymentStatus: string;
   orderStatus: string;
   courierName?: string;
   trackingLink?: string;
   trackingEmbedSrc?: string;
-  razorpayOrderId?: string;
-  razorpayPaymentId?: string;
   createdAt: string;
   shippingAddress?: {
     fullName?: string;
@@ -80,7 +77,7 @@ export default function OrderDetailPage() {
               </div>
               <div className="rounded-2xl bg-[#f1e8df] px-5 py-4 text-sm capitalize text-[#66584e]">
                 <p>Order: {order.orderStatus}</p>
-                <p>Payment: {order.paymentStatus}</p>
+                <p>Payment mode: Cash on delivery</p>
               </div>
             </header>
 
@@ -127,7 +124,7 @@ export default function OrderDetailPage() {
                     <Row label="Discount" value={`Rs. ${(order.discountAmount || 0).toLocaleString()}`} />
                     <Row label="Final amount" value={`Rs. ${(order.finalAmount || order.totalAmount).toLocaleString()}`} />
                     {order.couponCode && <Row label="Coupon" value={order.couponCode} />}
-                    {order.razorpayPaymentId && <Row label="Payment ID" value={order.razorpayPaymentId} />}
+                    <Row label="Payment mode" value="Cash on delivery" />
                   </div>
                 </section>
               </div>
@@ -135,6 +132,7 @@ export default function OrderDetailPage() {
 
             <section className="mt-5 rounded-3xl border border-[#eadfd4] bg-white p-6">
               <h2 className="font-serif text-2xl">Tracking</h2>
+              <TrackingTimeline status={order.orderStatus} />
               {order.courierName && <p className="mt-2 text-sm text-[#806f63]">Courier: {order.courierName}</p>}
               {order.trackingEmbedSrc ? (
                 <iframe
@@ -169,6 +167,13 @@ export default function OrderDetailPage() {
       <Footer />
     </main>
   );
+}
+
+function TrackingTimeline({ status }: { status: string }) {
+  const steps = ["ordered", "processing", "packed", "shipped", "delivered"];
+  const active = status === "cancelled" ? -1 : Math.max(0, steps.indexOf(status));
+  if (status === "cancelled") return <p className="mt-4 rounded-xl bg-red-50 p-4 text-sm text-red-700">This order has been cancelled.</p>;
+  return <div className="mt-5 grid gap-3 sm:grid-cols-5">{steps.map((step, index) => <div key={step} className={`rounded-xl border p-3 text-center text-xs capitalize ${index <= active ? "border-[#b88962] bg-[#f5eadf] text-[#513c2d]" : "border-[#eadfd4] text-[#9a8b7e]"}`}>{index <= active ? "✓ " : ""}{step === "shipped" ? "On the way" : step}</div>)}</div>;
 }
 
 function Row({ label, value }: { label: string; value: string }) {

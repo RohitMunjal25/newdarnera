@@ -39,8 +39,8 @@ export default function AdminPage() {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   
   // State for manual updates in the modal
-  const [updatePaymentStatus, setUpdatePaymentStatus] = useState("");
   const [updateOrderStatus, setUpdateOrderStatus] = useState("");
+  const [cancellationReason, setCancellationReason] = useState("");
   const [isUpdatingOrder, setIsUpdatingOrder] = useState(false);
 
   const load = useCallback(async () => { 
@@ -74,8 +74,8 @@ export default function AdminPage() {
   // Reset update states when modal opens
   useEffect(() => {
     if (selectedOrder) {
-      setUpdatePaymentStatus(selectedOrder.paymentStatus);
       setUpdateOrderStatus(selectedOrder.orderStatus);
+      setCancellationReason("");
     }
   }, [selectedOrder]);
   
@@ -168,8 +168,8 @@ export default function AdminPage() {
         method: "PATCH", 
         token: token(), 
         body: JSON.stringify({ 
-          paymentStatus: updatePaymentStatus,
-          orderStatus: updateOrderStatus
+          orderStatus: updateOrderStatus,
+          ...(updateOrderStatus === "cancelled" ? { cancellationReason } : {})
         }) 
       });
       await load();
@@ -422,7 +422,7 @@ export default function AdminPage() {
                   <p className="text-[10px] font-bold tracking-[.15em] text-[#a88a70] uppercase">Order Summary</p>
                   <div className="mt-1 space-y-2 text-sm bg-[#faf7f2] p-3 rounded-xl border border-[#eee7df]">
                     <div className="flex justify-between"><span className="text-[#705846]">Status:</span> <span className="capitalize font-medium">{selectedOrder.orderStatus}</span></div>
-                    <div className="flex justify-between"><span className="text-[#705846]">Payment:</span> <span className="capitalize font-medium">{selectedOrder.paymentStatus}</span></div>
+                    <div className="flex justify-between"><span className="text-[#705846]">Payment mode:</span> <span className="font-medium">Cash on delivery</span></div>
                     <div className="flex justify-between"><span className="text-[#705846]">Date:</span> <span>{new Date(selectedOrder.createdAt).toLocaleDateString("en-IN")}</span></div>
                     <div className="flex justify-between border-t border-[#dfd4c8] pt-2 font-bold"><span className="text-[#705846]">Total:</span> <span>{money(selectedOrder.finalAmount || selectedOrder.totalAmount)}</span></div>
                   </div>
@@ -449,20 +449,8 @@ export default function AdminPage() {
 
             <div className="mt-6 rounded-xl border border-[#e3d9cf] bg-[#faf7f2] p-4">
               <p className="text-[10px] font-bold tracking-[.15em] text-[#a88a70] uppercase mb-3">Update Order Status</p>
-              <div className="flex flex-col sm:flex-row gap-4">
-                <label className="flex-1 text-xs text-[#796b60]">
-                  Payment Status
-                  <select 
-                    value={updatePaymentStatus} 
-                    onChange={(e) => setUpdatePaymentStatus(e.target.value)}
-                    className="mt-1 w-full rounded-lg border border-[#e3d9cf] p-2 text-sm outline-none focus:border-[#9b765a]"
-                  >
-                    <option value="pending">Pending</option>
-                    <option value="paid">Paid</option>
-                    <option value="failed">Failed</option>
-                  </select>
-                </label>
-                <label className="flex-1 text-xs text-[#796b60]">
+              <div className="flex flex-col gap-4">
+                <label className="max-w-sm text-xs text-[#796b60]">
                   Order Status
                   <select 
                     value={updateOrderStatus} 
@@ -478,11 +466,12 @@ export default function AdminPage() {
                     <option value="returned">Returned</option>
                   </select>
                 </label>
+                {updateOrderStatus === "cancelled" && <label className="max-w-xl text-xs text-[#796b60]">Cancellation reason<textarea required value={cancellationReason} onChange={(e) => setCancellationReason(e.target.value)} className="mt-1 min-h-20 w-full rounded-lg border border-[#e3d9cf] p-2 text-sm outline-none focus:border-[#9b765a]" placeholder="Write the reason that will be emailed to the customer" /></label>}
               </div>
               <div className="mt-4 flex justify-end">
                 <button 
                   onClick={manualUpdateOrder}
-                  disabled={isUpdatingOrder || (updatePaymentStatus === selectedOrder.paymentStatus && updateOrderStatus === selectedOrder.orderStatus)}
+                  disabled={isUpdatingOrder || updateOrderStatus === selectedOrder.orderStatus || (updateOrderStatus === "cancelled" && !cancellationReason.trim())}
                   className="rounded-lg bg-[#312820] px-4 py-2 text-xs text-white disabled:opacity-50 hover:bg-[#1a1511] transition-colors"
                 >
                   {isUpdatingOrder ? "Updating..." : "Save Changes"}
@@ -575,7 +564,7 @@ function Orders({ orders, onShip, onView }: { orders: Order[]; onShip: (o: Order
                   )}
                 </td>
                 <td className="py-4 align-top text-[#705846]">{new Date(o.createdAt).toLocaleDateString("en-IN")}</td>
-                <td className="py-4 align-top capitalize text-[#705846]">{o.paymentStatus}</td>
+                <td className="py-4 align-top text-[#705846]">Cash on delivery</td>
                 <td className="py-4 align-top">
                   <span className={`px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider ${o.orderStatus === 'shipped' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}`}>
                     {o.orderStatus}
